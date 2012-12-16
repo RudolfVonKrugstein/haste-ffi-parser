@@ -1,0 +1,17 @@
+name:           haste-ffi-parser
+version:        0.1
+cabal-version:  >= 1.2
+build-type:     Simple
+author:         ls
+
+executable haste-ffi-parser
+  hs-source-dirs:  src
+  main-is:         Main.hs
+  build-depends:   
+                   base >= 4,
+                   parsec
+  ghc-options:     -Wall
+  other-modules:   
+                   Parser,
+                   Printer
+
