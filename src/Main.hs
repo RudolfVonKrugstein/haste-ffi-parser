@@ -22,7 +22,7 @@ main = do
 doParse :: String -> String -> IO ()
 doParse inFile outFile = do
   contents <- readFile inFile
-  let lines = parse parseFFIFile "(unkown)" contents
+  let lines = parse parseFFIFile inFile contents
   case lines of
     Right l  -> writeFilesOut outFile l
     Left p -> putStrLn $ "Error: " ++ (show p)

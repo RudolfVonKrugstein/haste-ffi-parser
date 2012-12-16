@@ -23,16 +23,19 @@ isIORetVal (PureReturn _) = False
 isIORetVal _ = True
 
 type JSExpr = [JSExprPart]
-data JSExprPart = StringPart String | ArgumentPart Int | RestArgPart
+data JSExprPart = StringPart String | ArgumentPart Int | RestArgPart deriving (Eq,Show)
 
 parseFFIFile :: GenParser Char st [FFILine]
-parseFFIFile = endBy line eol
+parseFFIFile = do
+  endBy line eol
+  --eof
+  --return res
  
 line :: GenParser Char st FFILine
 line = ffiLine <|> plainLine
 
 plainLine :: GenParser Char st FFILine
-plainLine = PlainLine <$> many anyChar
+plainLine = PlainLine <$> many (noneOf "\n")
 
 whiteSpaces :: GenParser Char st String
 whiteSpaces = many $ (char ' ' <|> char '\t')
@@ -46,21 +49,22 @@ ffiLine = do
   string "jscall "
   whiteSpaces
   char '\"'
-  jsExpr <- jsExpr
+  jsName <- jsExpr
   char '\"'
-  hsName <- many alphaNum
+  whiteSpaces
+  hsName <- many1 alphaNum
   whiteSpaces
   string "::"
   whiteSpaces
   arg <- arguments
   ret <- returnValue
-  return $ FFILine jsExpr hsName arg ret 
+  return $ FFILine jsName hsName arg ret 
 
 jsExpr :: GenParser Char st JSExpr
-jsExpr = many jsExprPart
+jsExpr = many1 jsExprPart
 
 jsExprPart :: GenParser Char st JSExprPart
-jsExprPart = jsExprArgPart <|> jsExprRestArgPart <|> jsExprStringPart
+jsExprPart = try jsExprArgPart <|> try jsExprRestArgPart <|> jsExprStringPart
 
 positiveNatural :: GenParser Char st Int
 positiveNatural = 
@@ -76,7 +80,7 @@ jsExprRestArgPart :: GenParser Char st JSExprPart
 jsExprRestArgPart = string "%*" >> return RestArgPart
 
 jsExprStringPart :: GenParser Char st JSExprPart
-jsExprStringPart = StringPart <$> many (noneOf "%")
+jsExprStringPart = StringPart <$> many1 (alphaNum <|> char '_')
  
 arguments :: GenParser Char st [Argument]
 arguments = endBy argument (string "->")
@@ -94,7 +98,7 @@ stringArgument = do
 plainArgument :: GenParser Char st Argument
 plainArgument = do
   whiteSpaces
-  res <- many alphaNum
+  res <- many1 (alphaNum <|> char ' ')
   whiteSpaces
   return $ OtherArgument res 
 
