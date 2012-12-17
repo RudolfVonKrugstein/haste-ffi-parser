@@ -12,14 +12,16 @@ haskellLine (PlainLine s) = s ++ "\n"
 haskellLine (FFILine jsExp hsName args retVal) =
   if or . map (==StringArgument) $ args then
     --expression with strings
-    "foreign import ccall \"" ++ hsName ++ "JSImpl\" " ++ hsName ++ "JSStr :: " ++ (concat . map showArgType $ args) ++ (showRetType retVal)
-    ++ "\n" ++ hsName ++ (argumentList (length args)) ++ " = " ++ hsName ++ (concat . map showArg $ zip args [1..] )
+    "foreign import ccall \"" ++ hsName ++ "JSImpl\" " ++ hsName ++ "JSStr :: " ++ signature
+    ++ "\n" ++ hsName ++ (argumentList (length args)) ++ " = " ++ hsName ++ "JSImpl " ++ (concat . map showArg $ zip args [1..] ) ++ "\n"
   else
     --expression without strings
-    "foreign import ccall \"" ++ hsName ++ "JSImpl\" " ++ hsName ++ " :: " ++ (concat . map showArgType $ args) ++ (showRetType retVal)
+    "foreign import ccall \"" ++ hsName ++ "JSImpl\" " ++ hsName ++ " :: " ++ signature ++ "\n"
   where
+    argTypeList = concat . map (\a-> showArgType a ++ " -> ") $ args
+    signature = argTypeList ++ (showRetType retVal)
     showArgType :: Argument -> String
-    showArgType StringArgument = "String"
+    showArgType StringArgument = "JSString"
     showArgType (OtherArgument s) = s
     showRetType :: ReturnValue -> String
     showRetType (IOVoid) = "IO ()"
@@ -36,8 +38,8 @@ javascriptFile = concat . map javascriptLine
 
 javaScriptLine (PlainLine _) = ""
 javascriptLine (FFILine jsExp hsName args retVal) =
-  "function " ++ hsName ++ "JSImpl(" ++ (argumentList $ length args) ++ ioArg ++ ") {\n"
-  ++ if retVal == IOVoid then jsCommand ++ "\nreturn [1,0];\n}" else "return [1,0," ++ jsCommand ++ "];\n}"
+  "function " ++ hsName ++ "JSImpl(" ++ (argumentList $ length args) ++ ioArg ++ ") {\n  "
+  ++ if retVal == IOVoid then jsCommand ++ ";\n  return [1,0];\n}" else "  return [1,0," ++ jsCommand ++ "];\n}\n"
   where
     argumentList :: Int -> String
     argumentList max = concatWith "," . map (\i -> "a" ++ (show i)) $ [1..max]

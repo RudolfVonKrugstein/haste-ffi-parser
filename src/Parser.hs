@@ -46,7 +46,7 @@ ffiLine = do
   whiteSpaces
   string "import "
   whiteSpaces
-  string "jscall "
+  string "jspattern "
   whiteSpaces
   char '\"'
   jsName <- jsExpr
@@ -80,10 +80,10 @@ jsExprRestArgPart :: GenParser Char st JSExprPart
 jsExprRestArgPart = string "%*" >> return RestArgPart
 
 jsExprStringPart :: GenParser Char st JSExprPart
-jsExprStringPart = StringPart <$> many1 (alphaNum <|> char '_')
+jsExprStringPart = StringPart <$> many1 (noneOf "\"%")
  
 arguments :: GenParser Char st [Argument]
-arguments = endBy argument (string "->")
+arguments = many (try $ do {a <- argument; string "->"; return a})
 
 argument :: GenParser Char st Argument
 argument = stringArgument <|> plainArgument
