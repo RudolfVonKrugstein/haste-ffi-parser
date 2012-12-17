@@ -29,6 +29,7 @@ doParse inFile outFile = do
     
 writeFilesOut :: String -> [FFILine] -> IO ()
 writeFilesOut baseName lines = do
+  putStrLn $ show lines
   let hsFile = haskellFile lines
       jsFile = javascriptFile lines
   writeFile (baseName ++ ".hs") hsFile

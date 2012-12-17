@@ -11,25 +11,17 @@ data FFILine = PlainLine String
           | FFILine {
             jsExp :: JSExpr,
             hsName :: String,
-            args :: [Argument],
-            retVal :: ReturnValue
-            }
-            
-data Argument = StringArgument | OtherArgument String deriving (Eq)
-data ReturnValue = IOVoid | IOReturn String | PureReturn String deriving (Eq)
+            hsType :: Type
+            } deriving (Eq,Show)
 
-isIORetVal :: ReturnValue -> Bool
-isIORetVal (PureReturn _) = False
-isIORetVal _ = True
+-- Type distinguishes between those types, that are important to us
+data Type = StringType | IOVoid | IOType Type | PlainType String | FunctionType Type Type deriving (Eq,Show)
 
 type JSExpr = [JSExprPart]
 data JSExprPart = StringPart String | ArgumentPart Int | RestArgPart deriving (Eq,Show)
 
 parseFFIFile :: GenParser Char st [FFILine]
-parseFFIFile = do
-  endBy line eol
-  --eof
-  --return res
+parseFFIFile = endBy line eol
  
 line :: GenParser Char st FFILine
 line = ffiLine <|> plainLine
@@ -56,9 +48,8 @@ ffiLine = do
   whiteSpaces
   string "::"
   whiteSpaces
-  arg <- arguments
-  ret <- returnValue
-  return $ FFILine jsName hsName arg ret 
+  signature <- typeSignature 
+  return $ FFILine jsName hsName signature
 
 jsExpr :: GenParser Char st JSExpr
 jsExpr = many1 jsExprPart
@@ -81,54 +72,61 @@ jsExprRestArgPart = string "%*" >> return RestArgPart
 
 jsExprStringPart :: GenParser Char st JSExprPart
 jsExprStringPart = StringPart <$> many1 (noneOf "\"%")
- 
-arguments :: GenParser Char st [Argument]
-arguments = many (try $ do {a <- argument; string "->"; return a})
 
-argument :: GenParser Char st Argument
-argument = stringArgument <|> plainArgument
+typeSignature :: GenParser Char st Type
+typeSignature = try functionType <|> oneArgumentType
 
-stringArgument :: GenParser Char st Argument
-stringArgument = do
+oneArgumentType :: GenParser Char st Type
+oneArgumentType = try $ do char '('
+                           res <- typeSignature
+                           char ')'
+                           return res
+                  <|> try stringType
+                  <|> try ioVoidType
+                  <|> try ioType
+                  <|> plainType
+                  
+stringType :: GenParser Char st Type
+stringType = do
   whiteSpaces
   string "String"
   whiteSpaces
-  return StringArgument
-
-plainArgument :: GenParser Char st Argument
-plainArgument = do
-  whiteSpaces
-  res <- many1 (alphaNum <|> char ' ')
-  whiteSpaces
-  return $ OtherArgument res 
-
-
-returnValue :: GenParser Char st ReturnValue
-returnValue = ioVoid <|> ioReturnValue <|> pureReturnValue
-
-ioVoid :: GenParser Char st ReturnValue
-ioVoid = do
+  return StringType
+  
+ioVoidType :: GenParser Char st Type
+ioVoidType = do
   whiteSpaces
   string "IO"
   whiteSpaces
   string "()"
-  whiteSpaces
-  return IOVoid 
-
-ioReturnValue :: GenParser Char st ReturnValue
-ioReturnValue = do
+  return IOVoid
+  
+ioType :: GenParser Char st Type
+ioType = do
   whiteSpaces
   string "IO"
   whiteSpaces
-  t <- many alphaNum
+  r <- oneArgumentType
   whiteSpaces
-  return $ IOReturn t
+  return $ IOType r
   
-pureReturnValue :: GenParser Char st ReturnValue
-pureReturnValue = do
+plainType :: GenParser Char st Type
+plainType = do
   whiteSpaces
-  t <- many alphaNum
+  r <- many1 alphaNum
   whiteSpaces
-  return $ PureReturn t
+  return $ PlainType r
+                  
+
+functionType :: GenParser Char st Type
+functionType = do
+  whiteSpaces
+  t1 <- oneArgumentType
+  whiteSpaces
+  string "->"
+  whiteSpaces
+  t2 <- typeSignature
+  whiteSpaces
+  return $ FunctionType t1 t2
 
 eol = char '\n'
