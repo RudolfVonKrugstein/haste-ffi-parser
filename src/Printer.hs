@@ -65,15 +65,7 @@ javascriptLine (FFILine jsExp hsName cConstr hsType) =
     concatWith sep (x:y:xs) = x ++ sep ++ (concatWith sep (y:xs))
     concatWith _ (x:[])     = x
     concatWith _  _ = ""
-    ioArg = if isIORetVal then
-              if null (args hsType) then
-                "_"
-              else  ",_"
-            else ""
-    isIORetVal = case result hsType of
-      IOVoid   -> True
-      IOType _ -> True
-      _        -> False
+    ioArg = if null (args hsType) then "_" else  ",_"
     jsCommand = concat . map showExprPart $ jsExp
     showExprPart :: JSExprPart -> String
     showExprPart (StringPart s) = s
