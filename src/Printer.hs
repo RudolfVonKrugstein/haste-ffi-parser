@@ -35,17 +35,17 @@ haskellLine (FFILine jsExp hsName hsType) =
     showArg :: (Type,Int) -> String
     showArg (a,i) = case a of
                       StringType       -> "(toJs a" ++ (show i) ++ ") "
-                      FunctionType _ _ -> "(JSFun a" ++ (show i) ++") "
+                      FunctionType _ _ -> "(mkCallback $! a" ++ (show i) ++") "
                       _                -> "a" ++ (show i) ++ " "
   
     argTypeList = concat . map (\a-> showArgType a ++ " -> ") $ args hsType
     signature = argTypeList ++ (showArgType . result $ hsType)
     showArgType :: Type -> String
     showArgType StringType = "JSString"
-    showArgType IOVoid = "IO ()"
-    showArgType (IOType t) = "IO (" ++ showArgType t ++ ")"
+    showArgType IOVoid = "JSFun (IO ())"
+    showArgType (IOType t) = "JSFun (IO (" ++ showArgType t ++ "))"
     showArgType (PlainType s) = s
-    showArgType (FunctionType f r) = "(" ++ (showArgType f) ++ " -> " ++ (showArgType r) ++ ")"
+    showArgType (FunctionType f r) = "JSFun (" ++ (showArgType f) ++ " -> " ++ (showArgType r) ++ ")"
     
     argumentList :: Int -> String
     argumentList max = concat . map (\i -> " a" ++ (show i)) $ [1..max]
