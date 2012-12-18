@@ -32,15 +32,18 @@ plainLine = PlainLine <$> many (noneOf "\n")
 
 whiteSpaces :: GenParser Char st String
 whiteSpaces = many $ (char ' ' <|> char '\t')
+whiteSpaces1 :: GenParser Char st String
+whiteSpaces1 = many1 $ (char ' ' <|> char '\t')
 
 ffiLine :: GenParser Char st FFILine
 ffiLine = do
-  string "foreign "
-  whiteSpaces
-  string "import "
-  whiteSpaces
-  string "jscall "
-  whiteSpaces
+  try $ do
+    string "foreign"
+    whiteSpaces1
+    string "import"
+    whiteSpaces1
+    string "jscall"
+  whiteSpaces1
   char '\"'
   jsName <- jsExpr
   char '\"'
