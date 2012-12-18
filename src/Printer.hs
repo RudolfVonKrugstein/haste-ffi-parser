@@ -9,7 +9,7 @@ haskellFile = concat . map haskellLine
 haskellLine :: FFILine -> String
 haskellLine (PlainLine s) = s ++ "\n"
 
-haskellLine (FFILine jsExp hsName hsType) =
+haskellLine (FFILine jsExp hsName cConstr hsType) =
   if needsConversion hsType then
     --expression with something that needs conversion
     "foreign import ccall \"" ++ hsName ++ "JSImpl\" " ++ hsName ++ "JSStr :: " ++ signature
@@ -39,7 +39,7 @@ haskellLine (FFILine jsExp hsName hsType) =
                       _                -> "a" ++ (show i) ++ " "
   
     argTypeList = concat . map (\a-> showArgType a ++ " -> ") $ args hsType
-    signature = argTypeList ++ (showArgType . result $ hsType)
+    signature = cConstr ++ argTypeList ++ (showArgType . result $ hsType)
     showArgType :: Type -> String
     showArgType StringType = "JSString"
     showArgType IOVoid = "JSFun (IO ())"
@@ -55,7 +55,7 @@ javascriptFile :: [FFILine] -> String
 javascriptFile = concat . map javascriptLine
 
 javascriptLine (PlainLine _) = ""
-javascriptLine (FFILine jsExp hsName hsType) =
+javascriptLine (FFILine jsExp hsName cConstr hsType) =
   "function " ++ hsName ++ "JSImpl(" ++ (argumentList $ length (args hsType)) ++ ioArg ++ ") {\n  "
   ++ if (result hsType) == IOVoid then jsCommand ++ ";\n  return [1,0];\n}" else "  return [1,0," ++ jsCommand ++ "];\n}\n"
   where

@@ -11,6 +11,7 @@ data FFILine = PlainLine String
           | FFILine {
             jsExp :: JSExpr,
             hsName :: String,
+            classConstraints :: String,
             hsType :: Type
             } deriving (Eq,Show)
 
@@ -48,8 +49,10 @@ ffiLine = do
   whiteSpaces
   string "::"
   whiteSpaces
+  constraints <- try classConstr <|> return ""
+  whiteSpaces
   signature <- typeSignature 
-  return $ FFILine jsName hsName signature
+  return $ FFILine jsName hsName constraints signature
 
 jsExpr :: GenParser Char st JSExpr
 jsExpr = many1 jsExprPart
@@ -128,5 +131,11 @@ functionType = do
   t2 <- typeSignature
   whiteSpaces
   return $ FunctionType t1 t2
+  
+classConstr :: GenParser Char st String
+classConstr = do
+  res <- many1 (noneOf "=\n:")
+  string "=>"
+  return (res ++ "=>")
 
 eol = char '\n'
