@@ -38,7 +38,7 @@ ffiLine = do
   whiteSpaces
   string "import "
   whiteSpaces
-  string "jspattern "
+  string "jscall "
   whiteSpaces
   char '\"'
   jsName <- jsExpr
