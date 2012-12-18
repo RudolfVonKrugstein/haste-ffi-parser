@@ -57,7 +57,7 @@ javascriptFile = concat . map javascriptLine
 javascriptLine (PlainLine _) = ""
 javascriptLine (FFILine jsExp hsName cConstr hsType) =
   "function " ++ hsName ++ "JSImpl(" ++ (argumentList $ length (args hsType)) ++ ioArg ++ ") {\n  "
-  ++ if (result hsType) == IOVoid then jsCommand ++ ";\n  return [1,0];\n}" else "  return [1,0," ++ jsCommand ++ "];\n}\n"
+  ++ if (result hsType) == IOVoid then jsCommand ++ ";\n  return [1,0];\n}\n" else "  return [1,0," ++ jsCommand ++ "];\n}\n"
   where
     argumentList :: Int -> String
     argumentList max = concatWith "," . map (\i -> "a" ++ (show i)) $ [1..max]
