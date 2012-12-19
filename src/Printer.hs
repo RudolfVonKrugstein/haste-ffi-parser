@@ -12,8 +12,8 @@ haskellLine (PlainLine s) = s ++ "\n"
 haskellLine (FFILine jsExp hsName cConstr hsType) =
   if needsConversion hsType then
     --expression with something that needs conversion
-    "foreign import ccall \"" ++ hsName ++ "JSImpl\" " ++ hsName ++ "JSStr :: " ++ signature
-    ++ "\n" ++ hsName ++ (argumentList (length $ args hsType)) ++ " = " ++ hsName ++ "JSImpl " ++ (concat . map showArg $ zip (args hsType) [1..] ) ++ "\n"
+    "foreign import ccall \"" ++ hsName ++ "JSImpl\" " ++ hsName ++ "WithJSTypes :: " ++ signature
+    ++ "\n" ++ hsName ++ (argumentList (length $ args hsType)) ++ " = " ++ hsName ++ "WithJSTypes " ++ (concat . map showArg $ zip (args hsType) [1..] ) ++ "\n"
   else
     --expression without strings
     "foreign import ccall \"" ++ hsName ++ "JSImpl\" " ++ hsName ++ " :: " ++ signature ++ "\n"
