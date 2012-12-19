@@ -34,7 +34,7 @@ haskellLine (FFILine jsExp hsName cConstr hsType) =
       
     showArg :: (Type,Int) -> String
     showArg (a,i) = case a of
-                      StringType       -> "(toJs a" ++ (show i) ++ ") "
+                      StringType       -> "(toJS a" ++ (show i) ++ ") "
                       FunctionType _ _ -> "(mkCallback $! a" ++ (show i) ++") "
                       _                -> "a" ++ (show i) ++ " "
   
