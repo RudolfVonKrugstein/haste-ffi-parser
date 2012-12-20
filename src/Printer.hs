@@ -39,13 +39,18 @@ haskellLine (FFILine jsExp hsName cConstr hsType) =
                       _                -> "a" ++ (show i) ++ " "
   
     argTypeList = concat . map (\a-> showArgType a ++ " -> ") $ args hsType
-    signature = cConstr ++ argTypeList ++ (showArgType . result $ hsType)
+    signature = cConstr ++ argTypeList ++ (showResType . result $ hsType)
     showArgType :: Type -> String
     showArgType StringType = "JSString"
     showArgType IOVoid = "JSFun (IO ())"
     showArgType (IOType t) = "JSFun (IO (" ++ showArgType t ++ "))"
     showArgType (PlainType s) = s
     showArgType (FunctionType f r) = "JSFun (" ++ (showArgType f) ++ " -> " ++ (showArgType r) ++ ")"
+    showResType :: Type -> String
+    showResType StringType = "JSString"
+    showResType IOVoid = "IO ()"
+    showResType (IOType t) = "IO (" ++ showResType t ++ ")"
+    showResType (PlainType s) = s
     
     argumentList :: Int -> String
     argumentList max = concat . map (\i -> " a" ++ (show i)) $ [1..max]
