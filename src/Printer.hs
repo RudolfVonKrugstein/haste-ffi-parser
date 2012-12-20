@@ -12,11 +12,11 @@ haskellLine (PlainLine s) = s ++ "\n"
 haskellLine (FFILine jsExp hsName cConstr hsType) =
   if needsConversion hsType then
     --expression with something that needs conversion
-    "foreign import ccall \"" ++ hsName ++ "JSImpl\" " ++ hsName ++ "WithJSTypes :: " ++ signature
+    "foreign import ccall \"" ++ hsName ++ "JSImpl\" " ++ hsName ++ "WithJSTypes :: " ++ (signature hsType)
     ++ "\n" ++ hsName ++ (argumentList (length $ args hsType)) ++ " = " ++ hsName ++ "WithJSTypes " ++ (concat . map showArg $ zip (args hsType) [1..] ) ++ "\n"
   else
     --expression without strings
-    "foreign import ccall \"" ++ hsName ++ "JSImpl\" " ++ hsName ++ " :: " ++ signature ++ "\n"
+    "foreign import ccall \"" ++ hsName ++ "JSImpl\" " ++ hsName ++ " :: " ++ (signature hsType) ++ "\n"
   where
     needsConversion t = case t of
         (IOType t')        -> needsConversion t'
@@ -35,17 +35,21 @@ haskellLine (FFILine jsExp hsName cConstr hsType) =
     showArg :: (Type,Int) -> String
     showArg (a,i) = case a of
                       StringType       -> "(toJSStr a" ++ (show i) ++ ") "
-                      FunctionType _ _ -> "(mkCallback $! a" ++ (show i) ++") "
+                      FunctionType _ _ -> "(mkCallback $! a" ++ (show i) ++ ") "
+                      IOVoid           -> "(mkCallback $! a" ++ (show i) ++ ") "
+                      IOType _         -> "(mkCallback $! a" ++ (show i) ++ ") "
                       _                -> "a" ++ (show i) ++ " "
   
-    argTypeList = concat . map (\a-> showArgType a ++ " -> ") $ args hsType
-    signature = cConstr ++ argTypeList ++ (showResType . result $ hsType)
+    argTypeList :: Type -> String
+    argTypeList t = concat . map (\a-> showArgType a ++ " -> ") $ args t
+    signature :: Type -> String
+    signature t = cConstr ++ (argTypeList t) ++ (showResType . result $ hsType)
     showArgType :: Type -> String
     showArgType StringType = "JSString"
     showArgType IOVoid = "JSFun (IO ())"
     showArgType (IOType t) = "JSFun (IO (" ++ showArgType t ++ "))"
     showArgType (PlainType s) = s
-    showArgType (FunctionType f r) = "JSFun (" ++ (showArgType f) ++ " -> " ++ (showArgType r) ++ ")"
+    showArgType (FunctionType f r) = "JSFun (" ++ signature (FunctionType f r) ++ ")"
     showResType :: Type -> String
     showResType StringType = "JSString"
     showResType IOVoid = "IO ()"
