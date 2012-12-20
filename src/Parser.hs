@@ -119,7 +119,7 @@ ioType = do
 plainType :: GenParser Char st Type
 plainType = do
   whiteSpaces
-  r <- many1 alphaNum
+  r <- many1 (alphaNum <|> char ' ')
   whiteSpaces
   return $ PlainType r
                   
