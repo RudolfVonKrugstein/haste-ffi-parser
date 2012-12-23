@@ -48,7 +48,7 @@ ffiLine = do
   jsName <- jsExpr
   char '\"'
   whiteSpaces
-  hsName <- many1 alphaNum
+  hsName <- many1 (alphaNum <|> char '_')
   whiteSpaces
   string "::"
   whiteSpaces
