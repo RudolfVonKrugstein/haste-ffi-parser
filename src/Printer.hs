@@ -43,7 +43,7 @@ haskellLine (FFILine jsExp hsName cConstr hsType) =
     argTypeList :: Type -> String
     argTypeList t = concat . map (\a-> showArgType a ++ " -> ") $ args t
     signature :: Type -> String
-    signature t = cConstr ++ (argTypeList t) ++ (showResType . result $ hsType)
+    signature t = cConstr ++ (argTypeList t) ++ (showResType . result $ t)
     showArgType :: Type -> String
     showArgType StringType = "JSString"
     showArgType IOVoid = "JSFun (IO ())"
