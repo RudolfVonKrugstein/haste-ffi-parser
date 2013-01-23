@@ -31,9 +31,9 @@ plainLine :: GenParser Char st FFILine
 plainLine = PlainLine <$> many (noneOf "\n")
 
 whiteSpaces :: GenParser Char st String
-whiteSpaces = many $ (char ' ' <|> char '\t')
+whiteSpaces = many $ (char ' ' <|> char '\t' <?> "Whitespace")
 whiteSpaces1 :: GenParser Char st String
-whiteSpaces1 = many1 $ (char ' ' <|> char '\t')
+whiteSpaces1 = many1 $ (char ' ' <|> char '\t' <?> "Whitespace")
 
 ffiLine :: GenParser Char st FFILine
 ffiLine = do
@@ -80,17 +80,18 @@ jsExprStringPart :: GenParser Char st JSExprPart
 jsExprStringPart = StringPart <$> many1 (noneOf "\"%")
 
 typeSignature :: GenParser Char st Type
-typeSignature = try functionType <|> oneArgumentType
+typeSignature = try functionType <|> try oneArgumentType
 
 oneArgumentType :: GenParser Char st Type
-oneArgumentType = try $ do char '('
-                           res <- typeSignature
-                           char ')'
-                           return res
+oneArgumentType = try (do char '('
+                          res <- typeSignature
+                          char ')'
+                          return res)
                   <|> try stringType
                   <|> try ioVoidType
                   <|> try ioType
-                  <|> plainType
+                  <|> try plainType
+                  <?> "Some haskell type"
                   
 stringType :: GenParser Char st Type
 stringType = do
@@ -115,14 +116,21 @@ ioType = do
   r <- oneArgumentType
   whiteSpaces
   return $ IOType r
-  
+
 plainType :: GenParser Char st Type
 plainType = do
   whiteSpaces
-  r <- many1 (alphaNum <|> char ' ')
+  parts <- many1 plainTypePart
   whiteSpaces
-  return $ PlainType r
-                  
+  return $ PlainType $ concat parts
+
+plainTypePart :: GenParser Char st String
+plainTypePart = do
+  try $ do char '('
+           parts <- many plainTypePart
+           char ')'
+           return $ "(" ++ (concat parts) ++ ")"
+  <|> many1 (alphaNum <|> char ' ')
 
 functionType :: GenParser Char st Type
 functionType = do
@@ -141,4 +149,4 @@ classConstr = do
   string "=>"
   return (res ++ "=>")
 
-eol = char '\n'
+eol = char '\n' <?> "end of line"
