@@ -7,30 +7,62 @@ import Data.Char (digitToInt)
 import Data.List
 import System.IO
 import System.Environment
+import System.Console.GetOpt
 
 import Parser
 import Printer
 
+-- Command line options
+data Options = Options {
+  convertFile :: IO String,
+  inFileName  :: Maybe String,
+  hsFileName  :: Maybe String,
+  jsFileName  :: Maybe String
+}
+
+defaultOptions = Options (return "[]") Nothing Nothing Nothing
+
+options :: [OptDescr (Options -> IO Options)]
+options = [
+  Option ['c'] ["convert"] (ReqArg (\s o -> o {convertFile = readFile s}) "FILE") "file with type definitinitions to convert",
+  Option ['i'] ["in"]      (ReqArg (\s o -> o {inFileName = Just s})      "FILE") "input file with ffi definition",
+  Option ['o'] ["out"]     (ReqArg (\s o -> o {hsFileName = Just s})      "FILE") "output haskell file",
+  Option ['j'] ["js-file"] (ReqArg (\s o -> o {jsFileName = Just s})      "FILE") "javascript file to output"
+]
 
 main :: IO()
 main = do
   args <- getArgs
-  case args of
+  -- parse the arguments
+  let (actions, nonOpt, msgs) = getOpt RequireOrder options args
+      opt = case getOpt RequireOrder options args of
+     (actions,[],[]) -> foldl' defaultOptions ($) actions
+	 (_,nonOpts ,[]) -> error $ "unrecognized arguments: " ++ unwords nonOpts
+	 (_,_,    ,msgs) -> error $ concat msgs ++ usageInfo
+  -- check the options
+  case opt of
+    Option cFile (Just inFile) (Just hsFile) (Just jsFile)  -> do
+	  cString <- cFile
+	  let convertTuples = read cString :: [(String,String,String)]
+	      convertData   = map (\(s1,s2,s3) -> ConvertData s1 s2 s3) convertTuples
+	  doParse convertData inFile hsFile jsFile
+    _ -> error $ usageInfo
+	  
     [inFile,outFile] -> doParse inFile outFile
     _                -> error "Syntax: ffiparser <infile> <outfile>"
     
-doParse :: String -> String -> IO ()
-doParse inFile outFile = do
+doParse :: ConvertData -> String -> String ->String -> IO ()
+doParse cData inFile hsFile jsFile = do
   contents <- readFile inFile
-  let lines = parse parseFFIFile inFile contents
+  let lines = parse (parseFFIFile cData) inFile contents
   case lines of
-    Right l  -> writeFilesOut outFile l
+    Right l  -> writeFilesOut hsFile jsFile l
     Left p -> putStrLn $ "Error: " ++ (show p)
     
-writeFilesOut :: String -> [FFILine] -> IO ()
-writeFilesOut baseName lines = do
+writeFilesOut :: String -> String -> [FFILine] -> IO ()
+writeFilesOut hsFile jsFile lines = do
   putStrLn $ show lines
-  let hsFile = haskellFile lines
-      jsFile = javascriptFile lines
-  writeFile (baseName ++ ".hs") hsFile
-  writeFile (baseName ++ ".js") jsFile
+  let hsData = haskellFile lines
+      jsData = javascriptFile lines
+  writeFile hsFile hsData
+  writeFile jsFile jsData

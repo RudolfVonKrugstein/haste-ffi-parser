@@ -4,7 +4,8 @@ module Parser where
 import Text.ParserCombinators.Parsec
 import Data.Functor
 import Data.Char (digitToInt)
-import Data.List
+import Data.List (foldl')
+import Data.Foldable (asum)
 
 -- Output data structure
 data FFILine = PlainLine String
@@ -16,16 +17,27 @@ data FFILine = PlainLine String
             } deriving (Eq,Show)
 
 -- Type distinguishes between those types, that are important to us
-data Type = StringType | IOVoid | IOType Type | PlainType String | FunctionType Type Type deriving (Eq,Show)
+data Type = IOVoid
+          | IOType Type
+          | PlainType String
+          | ConvertType ConvertData -- a type that must be converted
+          | FunctionType Type Type
+          deriving (Eq,Show)
+data ConvertData = ConvertData {
+                     typeName    :: String,
+                     toConvert   :: String,
+                     fromConvert :: String}
+                   deriving(Eq,Show)
+type ConvertMap = [ConvertData]
 
 type JSExpr = [JSExprPart]
 data JSExprPart = StringPart String | ArgumentPart Int | RestArgPart deriving (Eq,Show)
 
-parseFFIFile :: GenParser Char st [FFILine]
-parseFFIFile = endBy line eol
+parseFFIFile :: ConvertMap -> GenParser Char st [FFILine]
+parseFFIFile cm = endBy (line cm) eol
  
-line :: GenParser Char st FFILine
-line = ffiLine <|> plainLine
+line :: ConvertMap -> GenParser Char st FFILine
+line cm = ffiLine cm <|> plainLine
 
 plainLine :: GenParser Char st FFILine
 plainLine = PlainLine <$> many (noneOf "\n")
@@ -35,14 +47,14 @@ whiteSpaces = many $ (char ' ' <|> char '\t' <?> "Whitespace")
 whiteSpaces1 :: GenParser Char st String
 whiteSpaces1 = many1 $ (char ' ' <|> char '\t' <?> "Whitespace")
 
-ffiLine :: GenParser Char st FFILine
-ffiLine = do
+ffiLine :: ConvertMap -> GenParser Char st FFILine
+ffiLine cm = do
   try $ do
     string "foreign"
     whiteSpaces1
     string "import"
     whiteSpaces1
-    string "jscall"
+    string "cpattern"
   whiteSpaces1
   char '\"'
   jsName <- jsExpr
@@ -54,7 +66,7 @@ ffiLine = do
   whiteSpaces
   constraints <- try classConstr <|> return ""
   whiteSpaces
-  signature <- typeSignature 
+  signature <- typeSignature cm
   return $ FFILine jsName hsName constraints signature
 
 jsExpr :: GenParser Char st JSExpr
@@ -79,26 +91,28 @@ jsExprRestArgPart = string "%*" >> return RestArgPart
 jsExprStringPart :: GenParser Char st JSExprPart
 jsExprStringPart = StringPart <$> many1 (noneOf "\"%")
 
-typeSignature :: GenParser Char st Type
-typeSignature = try functionType <|> try oneArgumentType
+typeSignature :: ConvertMap -> GenParser Char st Type
+typeSignature cm = try (functionType cm) <|> try (oneArgumentType cm)
 
-oneArgumentType :: GenParser Char st Type
-oneArgumentType = try (do char '('
-                          res <- typeSignature
-                          char ')'
-                          return res)
-                  <|> try stringType
-                  <|> try ioVoidType
-                  <|> try ioType
-                  <|> try plainType
-                  <?> "Some haskell type"
+oneArgumentType :: ConvertMap -> GenParser Char st Type
+oneArgumentType cm =
+  try (do char '('
+          res <- typeSignature cm
+          char ')'
+          return res)
+  <|> try (convertType cm)
+  <|> try ioVoidType
+  <|> try (ioType cm)
+  <|> try plainType
+  <?> "Some haskell type"
                   
-stringType :: GenParser Char st Type
-stringType = do
+convertType :: ConvertMap -> GenParser Char st Type
+convertType cm = do
   whiteSpaces
-  string "String"
+  -- test if any of the types match (they are in fst cm)
+  r <- asum . map (\c -> do {string $ typeName c; return $ ConvertType c}) $ cm
   whiteSpaces
-  return StringType
+  return r
   
 ioVoidType :: GenParser Char st Type
 ioVoidType = do
@@ -108,12 +122,12 @@ ioVoidType = do
   string "()"
   return IOVoid
   
-ioType :: GenParser Char st Type
-ioType = do
+ioType :: ConvertMap -> GenParser Char st Type
+ioType cm = do
   whiteSpaces
   string "IO"
   whiteSpaces
-  r <- oneArgumentType
+  r <- oneArgumentType cm
   whiteSpaces
   return $ IOType r
 
@@ -132,14 +146,14 @@ plainTypePart = do
            return $ "(" ++ (concat parts) ++ ")"
   <|> many1 (alphaNum <|> char ' ')
 
-functionType :: GenParser Char st Type
-functionType = do
+functionType :: ConvertMap -> GenParser Char st Type
+functionType cm = do
   whiteSpaces
-  t1 <- oneArgumentType
+  t1 <- oneArgumentType cm
   whiteSpaces
   string "->"
   whiteSpaces
-  t2 <- typeSignature
+  t2 <- typeSignature cm
   whiteSpaces
   return $ FunctionType t1 t2
   
