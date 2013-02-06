@@ -12,6 +12,9 @@ import System.Console.GetOpt
 import Parser
 import Printer
 
+-- usage info
+usageHeader = "Usage: haste-ffi-parser"
+
 -- Command line options
 data Options = Options {
   convertFile :: IO String,
@@ -22,13 +25,13 @@ data Options = Options {
 
 defaultOptions = Options (return "[]") Nothing Nothing Nothing
 
-options :: [OptDescr (Options -> IO Options)]
+options :: [OptDescr (Options -> Options)]
 options = [
   Option ['c'] ["convert"] (ReqArg (\s o -> o {convertFile = readFile s}) "FILE") "file with type definitinitions to convert",
   Option ['i'] ["in"]      (ReqArg (\s o -> o {inFileName = Just s})      "FILE") "input file with ffi definition",
   Option ['o'] ["out"]     (ReqArg (\s o -> o {hsFileName = Just s})      "FILE") "output haskell file",
   Option ['j'] ["js-file"] (ReqArg (\s o -> o {jsFileName = Just s})      "FILE") "javascript file to output"
-]
+  ]
 
 main :: IO()
 main = do
@@ -36,22 +39,19 @@ main = do
   -- parse the arguments
   let (actions, nonOpt, msgs) = getOpt RequireOrder options args
       opt = case getOpt RequireOrder options args of
-     (actions,[],[]) -> foldl' defaultOptions ($) actions
-	 (_,nonOpts ,[]) -> error $ "unrecognized arguments: " ++ unwords nonOpts
-	 (_,_,    ,msgs) -> error $ concat msgs ++ usageInfo
+        (actions,[],[]) -> foldl' (flip ($)) defaultOptions actions
+        (_,nonOpts ,[]) -> error $ "unrecognized arguments: " ++ unwords nonOpts
+        (_,_,     msgs) -> error $ concat msgs ++ usageInfo usageHeader options
   -- check the options
   case opt of
-    Option cFile (Just inFile) (Just hsFile) (Just jsFile)  -> do
-	  cString <- cFile
-	  let convertTuples = read cString :: [(String,String,String)]
-	      convertData   = map (\(s1,s2,s3) -> ConvertData s1 s2 s3) convertTuples
-	  doParse convertData inFile hsFile jsFile
-    _ -> error $ usageInfo
-	  
-    [inFile,outFile] -> doParse inFile outFile
-    _                -> error "Syntax: ffiparser <infile> <outfile>"
+    Options cFile (Just inFile) (Just hsFile) (Just jsFile)  -> do
+      cString <- cFile
+      let convertTuples = read cString :: [(String,String,String)]
+          convertData   = map (\(s1,s2,s3) -> ConvertData s1 s2 s3) convertTuples
+      doParse convertData inFile hsFile jsFile
+    _ -> error $ usageInfo usageHeader options
     
-doParse :: ConvertData -> String -> String ->String -> IO ()
+doParse :: ConvertMap -> String -> String ->String -> IO ()
 doParse cData inFile hsFile jsFile = do
   contents <- readFile inFile
   let lines = parse (parseFFIFile cData) inFile contents
