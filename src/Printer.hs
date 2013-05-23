@@ -3,6 +3,10 @@ module Printer where
 
 import Parser
 
+-- convert the haskellname to the name of the foreign function
+toForeignName :: String -> String
+toForeignName = (++ "_CImpl")
+
 haskellFile :: [FFILine] -> String
 haskellFile = concat . map haskellLine
 
@@ -13,11 +17,11 @@ haskellLine (FFILine _ hsName cConstr hsType) =
   if needsConversion hsType then
     --expression with something that needs conversion
     -- so output to lines, the foreign call with converted types, and the conversion function
-    "foreign import ccall \"" ++ hsName ++ "_CImpl\" " ++ hsName ++ "_With_CTypes :: " ++ (signature hsType) ++ "\n"
+    "foreign import ccall \"" ++ (toForeignName hsName) ++ "\" " ++ hsName ++ "_With_CTypes :: " ++ (signature hsType) ++ "\n"
     ++ hsName ++ argumentList ++ "= " ++ resultConversion ++ hsName ++ "_With_CTypes " ++ argumentListWithConversion ++ "\n"
   else
     --expression without strings
-    "foreign import ccall \"" ++ hsName ++ "_CImpl\" " ++ hsName ++ " :: " ++ (signature hsType) ++ "\n"
+    "foreign import ccall \"" ++ (toForeignName hsName) ++ "\" " ++ hsName ++ " :: " ++ (signature hsType) ++ "\n"
   where
     -- return true if there is a IO or function type in the argument list
     -- return true if there is coversion type with to conversion in argument list
@@ -80,7 +84,7 @@ javascriptFile = concat . map javascriptLine
 
 javascriptLine (PlainLine _) = ""
 javascriptLine (FFILine jsExp hsName cConstr hsType) =
-  "function " ++ hsName ++ "JSImpl(" ++ (argumentList $ length (argTypes hsType)) ++ ioArg ++ ") {\n  "
+  "function " ++ (toForeignName hsName) ++ "(" ++ (argumentList $ length (argTypes hsType)) ++ ioArg ++ ") {\n  "
   ++ if (resultType hsType) == IOVoid then jsCommand ++ ";\n  return [1,0];\n}\n" else "  return [1,0," ++ jsCommand ++ "];\n}\n"
   where
     argumentList :: Int -> String
