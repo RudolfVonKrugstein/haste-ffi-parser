@@ -94,8 +94,8 @@ javascriptFile = concat . map javascriptLine
 
 javascriptLine (PlainLine _) = ""
 javascriptLine (FFILine jsExp hsName cConstr hsType) =
-  "function " ++ (toForeignName hsName) ++ "(" ++ (argumentList $ length (argTypes hsType)) ++ ioArg ++ ") {\n  "
-  ++ if (resultType hsType) == IOVoid then jsCommand ++ ";\n  return [1,0];\n}\n" else "  return [1,0," ++ jsCommand ++ "];\n}\n"
+  "function " ++ (toForeignName hsName) ++ "(" ++ (argumentList $ length (argTypes hsType)) ++ {-ioArg ++-} ") {\n  "
+  ++ if (resultType hsType) == IOVoid then jsCommand ++ ";\n  return;\n}\n" else "  return " ++ jsCommand ++ ";\n}\n"
   where
     argumentList :: Int -> String
     argumentList max = concatWith "," . map (\i -> "a" ++ (show i)) $ [1..max]
@@ -103,7 +103,7 @@ javascriptLine (FFILine jsExp hsName cConstr hsType) =
     concatWith sep (x:y:xs) = x ++ sep ++ (concatWith sep (y:xs))
     concatWith _ (x:[])     = x
     concatWith _  _ = ""
-    ioArg = if null (argTypes hsType) then "_" else  ",_"
+    --ioArg = if null (argTypes hsType) then "_" else  ",_"
     jsCommand = concat . map showExprPart $ jsExp
     showExprPart :: JSExprPart -> String
     showExprPart (StringPart s) = s
