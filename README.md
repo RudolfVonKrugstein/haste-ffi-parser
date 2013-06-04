@@ -33,17 +33,18 @@ In addition to creating the javascript function, you can also
 * Converts functions and IO monads to callbacks
 * Define conversion function for types haste handles different than javascipt. This also works for type classes.
 
-To define a conversion function, create a file and write a list of 3-tuples of strings with
+To define a conversion function, create a file and write a list of 4-tuples of strings with
 
 * The Name of the type
+* The name of the foreign type (the js type)
 * The name function to convert haskell -> javascript
 * The name of the function to convert javascript -> haskell
 
-The list as to be written as a haskell "[(String,String,String)]".
+The list as to be written as a haskell "[(String,String,String,String)]".
 For example, if you want to convert strings with "fromJS" and "toJS", your conversion file would be:
 
 ```
-[("String","fromJS","toJS")]
+[("String","JSString","fromJS","toJS")]
 ```
 
 Now you run
