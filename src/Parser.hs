@@ -31,9 +31,10 @@ data ClassConstraint = ClassConstraint {
   } deriving (Eq,Show)
 
 data ConvertData = ConvertData {
-                     typeName    :: String,
-                     toConvert   :: String,
-                     fromConvert :: String}
+                     typeName        :: String,
+                     foreignTypeName :: String,
+                     toConvert       :: String,
+                     fromConvert     :: String}
                    deriving(Eq,Show)
 type ConvertMap = [ConvertData]
 

@@ -46,8 +46,8 @@ main = do
   case opt of
     Options cFile (Just inFile) (Just hsFile) (Just jsFile)  -> do
       cString <- cFile
-      let convertTuples = read cString :: [(String,String,String)]
-          convertData   = map (\(s1,s2,s3) -> ConvertData s1 s2 s3) convertTuples
+      let convertTuples = read cString :: [(String,String,String,String)]
+          convertData   = map (\(s1,s2,s3,s4) -> ConvertData s1 s2 s3 s4) convertTuples
       doParse convertData inFile hsFile jsFile
     _ -> error $ usageInfo usageHeader options
     

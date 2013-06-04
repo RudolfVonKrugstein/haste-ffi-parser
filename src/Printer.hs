@@ -23,11 +23,11 @@ haskellLine (FFILine _ hsName cConstr hsType) =
   if needsConversion hsType then
     --expression with something that needs conversion
     -- so output to lines, the foreign call with converted types, and the conversion function
-    "foreign import ccall \"" ++ (toForeignName hsName) ++ "\" " ++ hsName ++ "_With_CTypes :: " ++ (signature hsType) ++ "\n"
+    "foreign import ccall \"" ++ (toForeignName hsName) ++ "\" " ++ hsName ++ "_With_CTypes :: " ++ (foreignSignature hsType) ++ "\n"
     ++ hsName ++ argumentList ++ "= " ++ resultConversion ++ hsName ++ "_With_CTypes " ++ argumentListWithConversion ++ "\n"
   else
     --expression without strings
-    "foreign import ccall \"" ++ (toForeignName hsName) ++ "\" " ++ hsName ++ " :: " ++ (signature hsType) ++ "\n"
+    "foreign import ccall \"" ++ (toForeignName hsName) ++ "\" " ++ hsName ++ " :: " ++ (foreignSignature hsType) ++ "\n"
   where
     -- return true if there is a IO or function type in the argument list
     -- return true if there is coversion type with to conversion in argument list
@@ -48,7 +48,7 @@ haskellLine (FFILine _ hsName cConstr hsType) =
       numArgs' (FunctionType _ r) = 1 + (numArgs' r)
       numArgs' _                  = 0
     argumentList :: String
-    argumentList = concat . map (\i -> " a" ++ (show i)) $ ([1..numArgs] :: [Int])
+    argumentList = concatMap (\i -> " a" ++ (show i)) $ ([1..numArgs] :: [Int])
     argumentListWithConversion :: String
     argumentListWithConversion = joinStrings ' ' $ zipWith argumentConversion ([1..] :: [Int]) (argTypes hsType)
       where
@@ -69,19 +69,21 @@ haskellLine (FFILine _ hsName cConstr hsType) =
       
   
     argTypeList :: Type -> String
-    argTypeList t = concat . map (\a-> showArgType a ++ " -> ") $ argTypes t
-    signature :: Type -> String
-    cConstraintString classConstr = (className classConstr) ++ concat (map (\p -> ' ':p) (parameters classConstr))
-    cConstraintsString = "(" ++ joinStrings ',' (map cConstraintString cConstr) ++ ") => "
-    signature t = cConstraintsString ++ (argTypeList t) ++ (showResType . resultType $ t)
+    argTypeList t = concatMap (\a-> showArgType a ++ " -> ") $ argTypes t
+    foreignSignature :: Type -> String
+    {-cConstraintString classConstr = (className classConstr) ++ concatMap (\p -> ' ':p) (parameters classConstr)
+    cConstraintsString
+      | cConstr == [] = ""
+      | otherwise     = "(" ++ joinStrings ',' (map cConstraintString cConstr) ++ ") => "-}
+    foreignSignature t = {-cConstraintsString ++-} (argTypeList t) ++ (showResType . resultType $ t)
     showArgType :: Type -> String
-    showArgType (ConvertType dat)   = typeName dat
+    showArgType (ConvertType dat)   = foreignTypeName dat
     showArgType IOVoid              = "JSFun (IO ())"
     showArgType (IOType t)          = "JSFun (IO (" ++ showArgType t ++ "))"
     showArgType (PlainType s)       = s
-    showArgType (FunctionType f r)  = "JSFun (" ++ signature (FunctionType f r) ++ ")"
+    showArgType (FunctionType f r)  = "JSFun (" ++ foreignSignature (FunctionType f r) ++ ")"
     showResType :: Type -> String
-    showResType (ConvertType dat)   = typeName dat
+    showResType (ConvertType dat)   = foreignTypeName dat
     showResType IOVoid              = "IO ()"
     showResType (IOType t)          = "IO (" ++ showResType t ++ ")"
     showResType (PlainType s)       = s
