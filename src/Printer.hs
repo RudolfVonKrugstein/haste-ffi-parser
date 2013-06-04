@@ -3,6 +3,11 @@ module Printer where
 
 import Parser
 
+-- helper function to join strings with separator
+joinStrings :: Char -> [String] -> String
+joinStrings _ (s:[]) = s
+joinStrings c (s:ss) = s ++ [c] ++ (joinStrings c ss)
+
 -- convert the haskellname to the name of the foreign function
 toForeignName :: String -> String
 toForeignName = (++ "_CImpl")
@@ -44,7 +49,7 @@ haskellLine (FFILine _ hsName cConstr hsType) =
     argumentList :: String
     argumentList = concat . map (\i -> " a" ++ (show i)) $ ([1..numArgs] :: [Int])
     argumentListWithConversion :: String
-    argumentListWithConversion = concat $ zipWith argumentConversion ([1..] :: [Int]) (argTypes hsType)
+    argumentListWithConversion = joinStrings ' ' $ zipWith argumentConversion ([1..] :: [Int]) (argTypes hsType)
       where
       argumentConversion id t = case t of
         (ConvertType dat)  -> if null (toConvert dat) then
@@ -65,7 +70,9 @@ haskellLine (FFILine _ hsName cConstr hsType) =
     argTypeList :: Type -> String
     argTypeList t = concat . map (\a-> showArgType a ++ " -> ") $ argTypes t
     signature :: Type -> String
-    signature t = cConstr ++ (argTypeList t) ++ (showResType . resultType $ t)
+    cConstraintString classConstr = (className classConstr) ++ concat (map (\p -> ' ':p) (parameters classConstr))
+    cConstraintsString = "(" ++ joinStrings ',' (map cConstraintString cConstr) ++ ") => "
+    signature t = cConstraintsString ++ (argTypeList t) ++ (showResType . resultType $ t)
     showArgType :: Type -> String
     showArgType (ConvertType dat)   = typeName dat
     showArgType IOVoid              = "JSFun (IO ())"

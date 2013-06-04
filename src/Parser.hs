@@ -4,7 +4,8 @@ module Parser where
 import Text.ParserCombinators.Parsec
 import Data.Functor
 import Data.Char (digitToInt)
-import Data.List (foldl')
+import Data.List (foldl', find)
+import Data.Maybe (catMaybes)
 import Data.Foldable (asum)
 
 -- Output data structure
@@ -12,7 +13,7 @@ data FFILine = PlainLine String
           | FFILine {
             jsExp :: JSExpr,
             hsName :: String,
-            classConstraints :: String,
+            cConstraints :: [ClassConstraint],
             hsType :: Type
             } deriving (Eq,Show)
 
@@ -23,6 +24,12 @@ data Type = IOVoid
           | ConvertType ConvertData -- a type that must be converted
           | FunctionType Type Type
           deriving (Eq,Show)
+-- class constraint in the type signature
+data ClassConstraint = ClassConstraint {
+     className  :: String,
+     parameters :: [String]
+  } deriving (Eq,Show)
+
 data ConvertData = ConvertData {
                      typeName    :: String,
                      toConvert   :: String,
@@ -64,9 +71,9 @@ ffiLine cm = do
   whiteSpaces
   string "::"
   whiteSpaces
-  constraints <- try classConstr <|> return ""
+  (constraints,newCm) <- try (classConstraints cm) <|> return ([],cm)
   whiteSpaces
-  signature <- typeSignature cm
+  signature <- typeSignature newCm
   return $ FFILine jsName hsName constraints signature
 
 jsExpr :: GenParser Char st JSExpr
@@ -157,10 +164,45 @@ functionType cm = do
   whiteSpaces
   return $ FunctionType t1 t2
   
-classConstr :: GenParser Char st String
-classConstr = do
-  res <- many1 (noneOf "=\n:")
+classConstraints :: ConvertMap -> GenParser Char st ([ClassConstraint],ConvertMap)
+classConstraints cm = do
+  cc <- try $ do c <- singleClassConstraint
+                 return [c]
+        <|> manyClassConstraints
+  whiteSpaces
   string "=>"
-  return (res ++ "=>")
+  -- find the class names in the convert map, and create appropriae new convert entries
+  let singleParamConstraints = filter (\(ClassConstraint _ parameters) -> length parameters == 1) cc
+      constrAppliesToConvertData constr convDat = typeName convDat == className constr
+      makeConvDataWithClassConstr constr convData = convData {typeName = (head . parameters) constr}
+      newCM = catMaybes $ map (\constr ->(makeConvDataWithClassConstr constr) <$> (find (constrAppliesToConvertData constr) cm)) singleParamConstraints
+  return (cc,cm ++ newCM)
+
+singleClassConstraint :: GenParser Char st ClassConstraint
+singleClassConstraint = do
+  whiteSpaces
+  first <- upper
+  rest  <- many alphaNum
+  let className = first:rest
+  whiteSpaces1
+  names <- many1 nameInClassConstraint
+  return $ ClassConstraint className names
+
+nameInClassConstraint :: GenParser Char st String
+nameInClassConstraint = do
+  first <- lower
+  rest  <- many alphaNum
+  whiteSpaces
+  return (first:rest)
+
+manyClassConstraints :: GenParser Char st [ClassConstraint]
+manyClassConstraints = do
+  char '('
+  whiteSpaces
+  res <- sepBy1 singleClassConstraint (char ',')
+  char ')'
+  return res
+
+  
 
 eol = char '\n' <?> "end of line"
