@@ -17,7 +17,7 @@ The hs-name is the name of the haskell function and Signature its signature.
 Example:
 
 ```haskell
-foreign import jscall "%1.prob = %2" setProb :: Obj -> Prop -> IO ()
+foreign import cpattern "%1.prob = %2" setProb :: Obj -> Prop -> IO ()
 ```
 
 Now convert your has file with:
