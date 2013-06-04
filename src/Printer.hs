@@ -5,6 +5,7 @@ import Parser
 
 -- helper function to join strings with separator
 joinStrings :: Char -> [String] -> String
+joinStrings _ [] = []
 joinStrings _ (s:[]) = s
 joinStrings c (s:ss) = s ++ [c] ++ (joinStrings c ss)
 
