@@ -31,7 +31,7 @@ This creates <haskell-output-file>.hs and <javascript-output-file>.js. The secon
 In addition to creating the javascript function, you can also
 
 * Converts functions and IO monads to callbacks
-* Define conversion function for types haste handles different than javascipt.
+* Define conversion function for types haste handles different than javascipt. This also works for type classes.
 
 To define a conversion function, create a file and write a list of 3-tuples of strings with
 
