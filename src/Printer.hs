@@ -57,9 +57,9 @@ haskellLine (FFILine _ hsName cConstr hsType) =
                                  "a" ++ (show id)
                               else
                                  "(" ++ (toConvert dat) ++ " a" ++ (show id) ++")"
-        (FunctionType _ _) -> "(mkCallback $! a" ++ (show id) ++ ")"
-        IOVoid             -> "(mkCallback $! a" ++ (show id) ++ ")"
-        IOType _           -> "(mkCallback $! a" ++ (show id) ++ ")"
+        (FunctionType _ _) -> "(mkCallback $ a" ++ (show id) ++ ")"
+        IOVoid             -> "(mkCallback $ a" ++ (show id) ++ ")"
+        IOType _           -> "(mkCallback $ a" ++ (show id) ++ ")"
         _                  -> "a" ++ (show id)
     resultConversion = resultConversion' (resultType hsType)
       where
