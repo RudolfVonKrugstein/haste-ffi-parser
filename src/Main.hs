@@ -56,13 +56,14 @@ doParse cData inFile hsFile jsFile = do
   contents <- readFile inFile
   let lines = parse (parseFFIFile cData) inFile contents
   case lines of
-    Right l  -> writeFilesOut hsFile jsFile l
+    Right l  -> writeFilesOut inFile hsFile jsFile l
     Left p -> putStrLn $ "Error: " ++ (show p)
     
-writeFilesOut :: String -> String -> [FFILine] -> IO ()
-writeFilesOut hsFile jsFile lines = do
+writeFilesOut :: String -> String -> String -> [FFILine] -> IO ()
+writeFilesOut inFile hsFile jsFile lines = do
   putStrLn $ show lines
-  let hsData = haskellFile lines
+  let linePragma = "{-# LINE 1 \"" ++ inFile ++ "\" #-}\n"
+      hsData = linePragma ++ haskellFile lines
       jsData = javascriptFile lines
   writeFile hsFile hsData
   writeFile jsFile jsData
