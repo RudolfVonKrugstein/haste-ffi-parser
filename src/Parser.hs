@@ -43,7 +43,7 @@ data JSExprPart = StringPart String | ArgumentPart Int | RestArgPart deriving (E
 
 parseFFIFile :: ConvertMap -> GenParser Char st [FFILine]
 parseFFIFile cm = endBy (line cm) eol
- 
+
 line :: ConvertMap -> GenParser Char st FFILine
 line cm = ffiLine cm <|> plainLine
 
@@ -84,7 +84,7 @@ jsExprPart :: GenParser Char st JSExprPart
 jsExprPart = try jsExprArgPart <|> try jsExprRestArgPart <|> jsExprStringPart
 
 positiveNatural :: GenParser Char st Int
-positiveNatural = 
+positiveNatural =
     foldl' (\a i -> a * 10 + digitToInt i) 0 <$> many1 digit
 
 jsExprArgPart :: GenParser Char st JSExprPart
@@ -92,7 +92,7 @@ jsExprArgPart = do
   char '%'
   n <- positiveNatural
   return $ ArgumentPart n
-  
+
 jsExprRestArgPart :: GenParser Char st JSExprPart
 jsExprRestArgPart = string "%*" >> return RestArgPart
 
@@ -113,7 +113,7 @@ oneArgumentType cm =
   <|> try (ioType cm)
   <|> try plainType
   <?> "Some haskell type"
-                  
+
 convertType :: ConvertMap -> GenParser Char st Type
 convertType cm = do
   whiteSpaces
@@ -121,7 +121,7 @@ convertType cm = do
   r <- asum . map (\c -> do {string $ typeName c; return $ ConvertType c}) $ cm
   whiteSpaces
   return r
-  
+
 ioVoidType :: GenParser Char st Type
 ioVoidType = do
   whiteSpaces
@@ -129,7 +129,7 @@ ioVoidType = do
   whiteSpaces
   string "()"
   return IOVoid
-  
+
 ioType :: ConvertMap -> GenParser Char st Type
 ioType cm = do
   whiteSpaces
@@ -164,7 +164,7 @@ functionType cm = do
   t2 <- typeSignature cm
   whiteSpaces
   return $ FunctionType t1 t2
-  
+
 classConstraints :: ConvertMap -> GenParser Char st ([ClassConstraint],ConvertMap)
 classConstraints cm = do
   cc <- try $ do c <- singleClassConstraint
@@ -204,6 +204,6 @@ manyClassConstraints = do
   char ')'
   return res
 
-  
+
 
 eol = char '\n' <?> "end of line"
