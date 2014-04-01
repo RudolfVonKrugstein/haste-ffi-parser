@@ -70,7 +70,7 @@ ffiLine cm = do
   whiteSpaces
   hsName <- many1 (alphaNum <|> char '_')
   whiteSpaces
-  string "::"
+  (string "::" <|> string "∷")
   whiteSpaces
   (constraints,newCm) <- try (classConstraints cm) <|> return ([],cm)
   whiteSpaces
@@ -159,7 +159,7 @@ functionType cm = do
   whiteSpaces
   t1 <- oneArgumentType cm
   whiteSpaces
-  string "->"
+  (string "->" <|> string "→")
   whiteSpaces
   t2 <- typeSignature cm
   whiteSpaces
@@ -171,7 +171,7 @@ classConstraints cm = do
                  return [c]
         <|> manyClassConstraints
   whiteSpaces
-  string "=>"
+  (string "=>" <|> string "⇒")
   -- find the class names in the convert map, and create appropriae new convert entries
   let singleParamConstraints = filter (\(ClassConstraint _ parameters) -> length parameters == 1) cc
       constrAppliesToConvertData constr convDat = typeName convDat == className constr
